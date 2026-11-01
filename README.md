@@ -56,6 +56,10 @@ Este repositorio une dos proyectos que antes estaban separados:
 - `archivo-vivo/` es el contenido original de este repo (`napolilucas/clarolab-ar`), movido a una subcarpeta.
 - `recorrido-oficinas/` viene de `napolilucas/ofi-clarolab-ar` y se incorporó con `git subtree`, así que conserva su historial. Esos commits tienen los archivos en la raíz, porque así estaban en el repo original. Para verlos: `git log --oneline "$(git log --format=%H --grep='Incorporar recorrido de oficinas' -1)^2"`.
 
+## Ayuda
+
+[`help.md`](help.md) es una guía práctica de MindAR y A-Frame: instalación, cómo compilar archivos `.mind`, parámetros, cómo corregir la vibración, eventos, video, GIF, acentos en `<a-text>`, cómo probar en el teléfono y enlaces útiles.
+
 ## Posibles mejoras
 
 - Las dos experiencias repiten estilos (paleta, header, HUD) y la lógica de arranque y cierre de MindAR. Se podrían extraer a una carpeta `shared/` común.
