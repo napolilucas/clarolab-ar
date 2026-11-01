@@ -25,11 +25,11 @@ No hay backend, build ni dependencias que instalar. Son archivos HTML, CSS y Jav
 La cámara (`getUserMedia`) solo funciona en un **contexto seguro**: `https://` o `http://localhost`. Si abrís el HTML con doble clic (`file://`), el navegador bloquea la cámara y la carga de los `.mind`.
 
 ```bash
-# desde la raíz del proyecto
+# desde la raíz del repositorio
 python3 -m http.server 8000
 ```
 
-Abrí `http://localhost:8000/`. Necesitás conexión a Internet para descargar A-Frame y MindAR.
+Abrí `http://localhost:8000/recorrido-oficinas/`. Necesitás conexión a Internet para descargar A-Frame y MindAR.
 
 Para probar desde un teléfono, el sitio tiene que estar servido por HTTPS. Las opciones son publicarlo (ver [Publicación](#publicación)) o usar un túnel HTTPS hacia tu servidor local. Una IP de la red local con `http://` no alcanza.
 
@@ -71,7 +71,7 @@ index.html ──(toque en el GIF)──► workplace.html
 ## Estructura del proyecto
 
 ```
-.
+recorrido-oficinas/
 ├── index.html             Portada con enlace al recorrido
 ├── tour.css               Estilos de la portada
 ├── workplace.html         Bienvenida + escena A-Frame + HUD del escáner
@@ -224,7 +224,7 @@ Para actualizar una estación existente, alcanza con reemplazar su `.mind` (y `t
 
 ## Publicación
 
-Cualquier hosting estático con HTTPS sirve. Como el repositorio está en GitHub, **GitHub Pages** es la opción más directa: *Settings → Pages → Deploy from branch → `main` / root*.
+Cualquier hosting estático con HTTPS sirve. El repositorio `napolilucas/clarolab-ar` puede publicarse con **GitHub Pages** (*Settings → Pages → Deploy from branch → `main` / root*). El recorrido queda en `https://napolilucas.github.io/clarolab-ar/recorrido-oficinas/`.
 
 Después de publicar, generá el QR físico con la URL pública.
 

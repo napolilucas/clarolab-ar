@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050806">
+  <meta name="description" content="Experiencias de realidad aumentada de Clarolab en Junín, Argentina.">
+  <title>Clarolab AR</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #050806;
+      --green: #00e6a0;
+      --paper: #f2f8f5;
+      --muted: #99aaa2;
+      --line: rgba(220, 255, 242, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(ellipse at 70% 30%, rgba(0, 230, 160, .1), transparent 40%), var(--ink);
+      color: var(--paper);
+      font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    header,
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.4rem clamp(1rem, 5vw, 5rem);
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .18em;
+    }
+
+    header { border-bottom: 1px solid var(--line); }
+    header b { color: var(--green); }
+
+    main {
+      flex: 1;
+      width: min(100%, 72rem);
+      margin: 0 auto;
+      padding: clamp(2.5rem, 8vh, 6rem) clamp(1rem, 5vw, 5rem);
+    }
+
+    h1 {
+      margin: 0 0 1rem;
+      color: var(--green);
+      font: 700 clamp(2.4rem, 7vw, 5rem)/.95 "Space Grotesk", "DM Sans", sans-serif;
+      letter-spacing: -.05em;
+    }
+
+    h1 span { color: var(--paper); }
+
+    .lead {
+      max-width: 38rem;
+      margin: 0 0 clamp(2rem, 6vh, 3.5rem);
+      color: var(--muted);
+      font-size: clamp(1rem, 2.4vw, 1.2rem);
+      line-height: 1.5;
+    }
+
+    .experiences {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      gap: 1rem;
+    }
+
+    .experience {
+      display: flex;
+      flex-direction: column;
+      gap: .7rem;
+      padding: 1.6rem;
+      border: 1px solid var(--line);
+      border-radius: 1.2rem;
+      background: rgba(10, 17, 14, .7);
+      color: inherit;
+      text-decoration: none;
+      transition: border-color .2s, transform .2s;
+    }
+
+    .experience:hover,
+    .experience:focus-visible {
+      border-color: var(--green);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    .experience small {
+      color: var(--green);
+      font-weight: 700;
+      letter-spacing: .16em;
+    }
+
+    .experience h2 {
+      margin: 0;
+      font-size: 1.6rem;
+      letter-spacing: -.02em;
+    }
+
+    .experience p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .experience span {
+      margin-top: auto;
+      padding-top: .6rem;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .experience { transition: none; }
+      .experience:hover, .experience:focus-visible { transform: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <header><span><b>C/</b> CLAROLAB</span><span>JUNÍN, ARGENTINA</span></header>
+
+  <main>
+    <h1>Clarolab <span>en realidad aumentada.</span></h1>
+    <p class="lead">Dos recorridos para conocer a Clarolab con la cámara de tu teléfono: lo que hacemos y los espacios donde lo hacemos.</p>
+
+    <div class="experiences">
+      <a class="experience" href="./archivo-vivo/">
+        <small>01 · ARCHIVO VIVO</small>
+        <h2>Lo que hacemos</h2>
+        <p>Apuntá a la puerta, la mascota o los paisajes y recorré en una espiral 3D cinco capítulos: desarrollo, testing, seguridad, laboratorio y equipo.</p>
+        <span>Entrar ↗</span>
+      </a>
+      <a class="experience" href="./recorrido-oficinas/">
+        <small>02 · RECORRIDO POR LAS OFICINAS</small>
+        <h2>Dónde lo hacemos</h2>
+        <p>Caminá por las oficinas estación por estación: la entrada, los puestos de trabajo, la oficina de Fran, el tablero y los cuadros del equipo.</p>
+        <span>Entrar ↗</span>
+      </a>
+    </div>
+
+    <p class="note">Las dos experiencias necesitan acceso a la cámara y una conexión HTTPS.</p>
+  </main>
+
+  <footer><span>CLAROLAB · DESDE JUNÍN</span><span>TECNOLOGÍA CON HISTORIA</span></footer>
+</body>
+
+</html>
