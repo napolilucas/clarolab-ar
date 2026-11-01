@@ -23,8 +23,8 @@ No requiere build ni backend: HTML + CSS + JavaScript, con las librerías cargad
 ## Estructura
 
 ```
-.
-├── museo.html          # Página principal (bienvenida, escena AR, colección)
+archivo-vivo/
+├── index.html          # Página principal (bienvenida, escena AR, colección)
 ├── museo.css           # Estilos, animaciones y responsive (breakpoint 760px)
 ├── script.js           # Lógica: espiral 3D, navegación, ciclo de vida de MindAR, QR
 └── images/
@@ -59,17 +59,17 @@ No requiere build ni backend: HTML + CSS + JavaScript, con las librerías cargad
 
 ## Ejecución local
 
-La cámara solo funciona en un **contexto seguro** (HTTPS o `localhost`). Abrir `museo.html` con `file://` no alcanza.
+La cámara solo funciona en un **contexto seguro** (HTTPS o `localhost`). Abrir `index.html` con `file://` no alcanza.
 
 ```bash
-# Desde la raíz del proyecto
+# Desde la raíz del repositorio
 python3 -m http.server 8080
-# Abrir http://localhost:8080/museo.html
+# Abrir http://localhost:8080/archivo-vivo/
 ```
 
 Para probar desde el teléfono hace falta HTTPS. Algunas opciones:
 
-- Publicar en **GitHub Pages** (el repo ya está en `github.com/napolilucas/clarolab-ar`). La URL queda como `https://<usuario>.github.io/clarolab-ar/museo.html`, y el QR se genera solo.
+- Publicar en **GitHub Pages** (el repo ya está en `github.com/napolilucas/clarolab-ar`). La URL queda como `https://<usuario>.github.io/clarolab-ar/archivo-vivo/`, y el QR se genera solo.
 - Usar un túnel HTTPS (`ngrok http 8080`, `cloudflared tunnel --url http://localhost:8080`, etc.).
 
 > El `.mind` pesa unos 14 MB: en redes móviles lentas, la primera carga del AR puede demorar.
@@ -86,8 +86,8 @@ Para probar desde el teléfono hace falta HTTPS. Algunas opciones:
 | Qué | Dónde |
 |-----|-------|
 | Textos de los capítulos (vista AR) | Array `exhibits` en `script.js` |
-| Etiquetas de las tarjetas 3D | `<a-text value="…">` en `museo.html` |
-| Textos de la sección Colección | `.collection-grid` en `museo.html` |
+| Etiquetas de las tarjetas 3D | `<a-text value="…">` en `index.html` |
+| Textos de la sección Colección | `.collection-grid` en `index.html` |
 | Colores | Variables en `:root` de `museo.css` (`--green: #00e6a0`, etc.) |
 | Forma de la espiral | `turns`, `radius`, `height` en `helix-spine` |
 | Intervalo de la vista previa | `setInterval(…, 4800)` en `script.js` |
