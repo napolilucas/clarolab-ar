@@ -1,137 +1,241 @@
-# Guía del recorrido AR de Clarolab
+# Recorrido AR de Clarolab
 
-Esta guía explica qué hace cada archivo y cómo se conectan las dos pantallas. Está pensada para poder leer el proyecto sin conocer A-Frame o MindAR de antemano.
+Sitio web estático que guía a los visitantes por las oficinas de Clarolab (Junín, Argentina) usando **realidad aumentada basada en imágenes**. El visitante abre la página en el teléfono, activa la cámara y apunta a los carteles de cada estación. Sobre cada cartel aparece una tarjeta 3D con información de ese lugar.
 
-## Qué hace la web
+No hay backend, build ni dependencias que instalar. Son archivos HTML, CSS y JavaScript que cargan **A-Frame 1.5.0** y **MindAR 1.2.5** desde CDN.
 
-1. `index.html` muestra la portada “Recorrido Clarolab”. El GIF es un enlace: al tocarlo, abre `workplace.html`.
-2. En `workplace.html`, el usuario pulsa **Comenzar el recorrido**. En ese momento el navegador solicita permiso para usar la cámara.
-3. El recorrido carga un `.mind` a la vez. Al reconocer uno de sus carteles, muestra la información de esa estación; cuando se deja el cartel o pasa el tiempo de espera, avanza a la estación siguiente con la cámara activa.
-4. El botón **×** detiene el escáner y vuelve a la pantalla de bienvenida. También se puede cerrar con la tecla Escape.
+---
 
-El GIF de la portada no lee un QR. Es una ayuda visual y un acceso táctil a la segunda pantalla. Para que el QR impreso en la entrada funcione, su contenido debe ser la dirección pública de `workplace.html` una vez publicado el sitio.
+## Índice
 
-## Archivos principales
+- [Inicio rápido](#inicio-rápido)
+- [Cómo funciona la experiencia](#cómo-funciona-la-experiencia)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Configuración de estaciones](#configuración-de-estaciones)
+- [Arquitectura de `workplace.js`](#arquitectura-de-workplacejs)
+- [Interfaz y estilos](#interfaz-y-estilos)
+- [Agregar o modificar una estación](#agregar-o-modificar-una-estación)
+- [Publicación](#publicación)
+- [Limitaciones conocidas](#limitaciones-conocidas)
 
-| Archivo | Para qué sirve |
-| --- | --- |
-| `index.html` | Portada y enlace al recorrido. |
-| `tour.css` | Apariencia y adaptación a distintos tamaños de pantalla de la portada. |
-| `workplace.html` | Bienvenida, escena de A-Frame, tarjeta AR y controles del escáner. |
-| `workplace.css` | Diseño de la bienvenida y de la interfaz que aparece sobre la cámara. |
-| `workplace.js` | Inicio y cierre de cámara, reconocimiento del marcador y construcción del fondo de la tarjeta AR. |
-| `workplace-content.js` | Orden de las estaciones, archivo `.mind` independiente y tarjeta correspondiente a cada una. |
-| `assets/targets_entrada.mind` | Marcador independiente de la entrada (4 imágenes internas). |
-| `assets/targets_ofi2.mind` | Marcador independiente de la oficina 2 (3 imágenes internas). |
-| `assets/targets_ofiFran.mind` | Marcador independiente de la oficina de Fran (4 imágenes internas). |
-| `assets/termica.mind`, `assets/cuadros_color.mind` | Marcadores independientes de tablero y ambiente de oficina. |
-| `assets/termica.jpg`, `assets/cuadrados_color.jpg` | Fotos originales que deben mostrarse a la cámara. |
-| `assets/qr-scan.gif` | Animación del escáner en la portada y en la pantalla de cámara. |
-| `assets/ars_scan.svg` | Ilustración vectorial de la pantalla de bienvenida. |
-| `assets/panelpruea.png` | Fondo visual de las tarjetas AR de cada estación. |
-| `assets/Clarolab.svg` | Logo vectorial disponible en los recursos. Las páginas actuales no lo cargan directamente. |
+---
 
-## Cómo se conectan HTML, CSS y JavaScript
+## Inicio rápido
 
-### Portada: `index.html` y `tour.css`
+La cámara (`getUserMedia`) solo funciona en un **contexto seguro**: `https://` o `http://localhost`. Si abrís el HTML con doble clic (`file://`), el navegador bloquea la cámara y la carga de los `.mind`.
 
-En el HTML están el título, el texto y el enlace que contiene el GIF. El CSS coloca esas piezas en un lienzo vertical y ajusta tamaños y posiciones según la pantalla.
+```bash
+# desde la raíz del proyecto
+python3 -m http.server 8000
+```
 
-- `.welcome-screen` ocupa el alto visible del dispositivo.
-- `.welcome-art` define el área de la portada.
-- `.poster-copy` agrupa el título y la descripción.
-- `.scan-entry` posiciona el GIF y lo convierte en un enlace a `workplace.html`.
-- Las reglas `@media` adaptan el diseño a teléfonos, pantallas anchas y orientación horizontal.
-- `prefers-reduced-motion` evita desplazamientos animados innecesarios para quienes reducen el movimiento en su sistema.
+Abrí `http://localhost:8000/`. Necesitás conexión a Internet para descargar A-Frame y MindAR.
 
-El GIF se mezcla visualmente con el fondo oscuro mediante `mix-blend-mode: screen`; por eso las zonas negras del GIF no forman un rectángulo opaco.
+Para probar desde un teléfono, el sitio tiene que estar servido por HTTPS. Las opciones son publicarlo (ver [Publicación](#publicación)) o usar un túnel HTTPS hacia tu servidor local. Una IP de la red local con `http://` no alcanza.
 
-### Pantalla del recorrido: `workplace.html`
+---
 
-La página contiene dos capas principales:
+## Cómo funciona la experiencia
 
-- `welcomePanel`: bienvenida, botón de inicio e ilustración.
-- `scanPanel`: escena AR y controles de cámara.
+```
+index.html ──(toque en el GIF)──► workplace.html
+                                     │
+                         "Comenzar el recorrido"
+                                     │
+                                     ▼
+                        permiso de cámara + MindAR
+                                     │
+              ┌──────────────────────┴───────────────────────┐
+              ▼                                              │
+   Estación N: se carga su .mind                             │
+              │                                              │
+   ¿se detecta el cartel? ──sí──► se muestra la tarjeta 3D   │
+              │                         │                    │
+              no (30 s)          se pierde el cartel (2,5 s) │
+              │                         │                    │
+              └──────────► estación N+1 ┴────────────────────┘
+                     (después de la última vuelve a la primera)
+```
 
-`workplace.js` crea los objetivos del `.mind` de la estación actual. Sus índices son locales a ese archivo. Cada estación tiene una tarjeta propia definida en `workplace-content.js`; al cambiar de estación se descartan sus objetivos y se cargan los del archivo siguiente.
+1. **Portada (`index.html`)**: muestra el título "Recorrido Clarolab" y un GIF animado de escáner. El GIF **no lee QR**: es un enlace a `workplace.html`. El QR impreso en la entrada tiene que apuntar a la URL pública de `workplace.html` (o de la portada).
+2. **Bienvenida (`workplace.html`)**: el botón **Comenzar el recorrido** oculta la bienvenida, muestra el visor y pide permiso para la cámara.
+3. **Recorrido por estaciones**: se analiza **un solo archivo `.mind` a la vez**. Cada estación tiene su propio `.mind`, que puede contener varias fotos del mismo lugar.
+   - Cuando MindAR reconoce cualquiera de esas fotos, se muestra la tarjeta de la estación y el estado pasa a `Punto N de 5 · TÍTULO`.
+   - Cuando el cartel deja de verse, el recorrido avanza a la siguiente estación después de `lostAdvanceMs` (2,5 s).
+   - Si no se detecta nada, avanza después de `idleAdvanceMs` (30 s).
+   - La cámara sigue encendida durante los cambios de estación. Después de la última estación, el recorrido vuelve a la primera.
+4. **Salir**: el botón **×** o la tecla **Escape** detienen la cámara y vuelven a la bienvenida. El logo `C/CLAROLAB` del visor lleva a la portada.
 
-Cada objetivo recibe una tarjeta 3D sobre el panel PNG de Clarolab, con título, cuatro líneas y pie. El texto se genera desde la entrada correspondiente de `workplace-content.js`.
+---
 
-`workplace-content.js` define el orden del recorrido y relaciona cada archivo `.mind` con su tarjeta. Solo se analiza una estación a la vez. También se cargan dos bibliotecas desde Internet:
+## Estructura del proyecto
 
-- **A-Frame 1.5.0** crea la escena 3D que se superpone a la cámara.
-- **MindAR 1.2.5** obtiene la cámara y busca la imagen objetivo.
+```
+.
+├── index.html             Portada con enlace al recorrido
+├── tour.css               Estilos de la portada
+├── workplace.html         Bienvenida + escena A-Frame + HUD del escáner
+├── workplace.css          Estilos de la bienvenida y del HUD sobre la cámara
+├── workplace-content.js   Datos: estaciones, archivos .mind, textos y tiempos
+├── workplace.js           Lógica: cámara, MindAR, tarjetas 3D y avance del recorrido
+└── assets/
+    ├── targets_entrada.mind    Estación 1 · Entrada (4 imágenes)
+    ├── targets_ofi2.mind       Estación 2 · Oficina (3 imágenes)
+    ├── targets_ofiFran.mind    Estación 3 · Oficina de Fran (4 imágenes)
+    ├── termica.mind            Estación 4 · Tablero eléctrico (1 imagen)
+    ├── cuadros_color.mind      Estación 5 · Cuadros / equipo (1 imagen)
+    ├── termica.jpg             Foto original del tablero (referencia, no se carga)
+    ├── cuadrados_color.jpg     Foto original de los cuadros (referencia, no se carga)
+    ├── panelpruea.png          Fondo de las tarjetas AR
+    ├── qr-scan.gif             Animación de escáner (portada y visor)
+    ├── ars_scan.svg            Ilustración de la bienvenida
+    └── Clarolab.svg            Logo (no se usa actualmente en las páginas)
+```
 
-Los scripts de estas bibliotecas aparecen antes de `workplace.js` para que el código del proyecto pueda usar A-Frame y MindAR. `workplace.js` tiene `defer`: espera a que el HTML esté leído antes de buscar botones y elementos por sus `id`.
+### Orden de carga de scripts (`workplace.html`)
 
-### Diseño: `workplace.css`
+```html
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="./workplace-content.js"></script>   <!-- define window.WORKPLACE_CONTENT -->
+<script src="./workplace.js" defer></script>      <!-- se ejecuta con el DOM ya leído -->
+```
 
-Este archivo controla la bienvenida, los botones, la tarjeta de estado y el visor.
+MindAR se registra como componente de A-Frame, así que tiene que cargarse después de A-Frame. `workplace-content.js` define los datos antes de que `workplace.js` los lea.
 
-- `.welcome-panel` distribuye la bienvenida en columnas en pantallas grandes y en una columna en teléfonos.
-- `.scan-panel` contiene la escena AR. Se mantiene en el documento desde el inicio, pero invisible y sin recibir toques hasta añadirle `is-visible`. Esto permite que A-Frame termine de inicializarse antes de abrir la cámara.
-- `.scan-hud` es la capa de controles dibujada sobre el visor.
-- `.finder` y sus elementos `span` crean las cuatro esquinas verdes y la línea de lectura con CSS.
-- `.close-button` queda habilitado para recibir toques aunque el resto del HUD no intercepte gestos de la cámara.
-- Las reglas para pantallas estrechas, teléfonos pequeños y orientación horizontal organizan el contenido sin desbordarlo.
-- `env(safe-area-inset-*)` deja espacio para la cámara frontal, la barra del sistema y las esquinas redondeadas de algunos teléfonos.
+---
 
-## Qué hace `workplace.js`
+## Configuración de estaciones
 
-El archivo está envuelto en una función inmediata `(() => { ... })()`. Así, sus variables quedan dentro de este archivo y no se mezclan con las de A-Frame ni con las del navegador.
+Todo el contenido está en `workplace-content.js`, en el objeto global `window.WORKPLACE_CONTENT`:
 
-### Elementos y estados
+```js
+window.WORKPLACE_CONTENT = {
+  groups: [
+    {
+      id: 'entrada',                          // prefijo para los id de las entidades
+      file: './assets/targets_entrada.mind',  // marcador de la estación
+      targetCount: 4,                         // cantidad de imágenes dentro del .mind
+      title: 'BIENVENIDOS',
+      lines: ['…', '…', '…', '…'],            // exactamente 4 líneas
+      footer: 'DE JUNÍN AL MUNDO',
+      accent: '#00e6a0', background: '#07140f', visual: 'welcome' // ver Limitaciones
+    },
+    // …
+  ],
+  idleAdvanceMs: 30000,  // avanzar si no se detecta nada
+  lostAdvanceMs: 2500    // avanzar después de perder el cartel
+};
+```
 
-Al principio, el código guarda referencias a los botones, paneles, escena, objetivo y mensaje de estado. También mantiene cuatro indicadores:
+| # | `id` | Archivo | Imágenes | Título |
+|---|------|---------|----------|--------|
+| 1 | `entrada` | `targets_entrada.mind` | 4 | BIENVENIDOS |
+| 2 | `oficina2` | `targets_ofi2.mind` | 3 | OFICINA N.º 1 |
+| 3 | `fran` | `targets_ofiFran.mind` | 4 | FRAN |
+| 4 | `termica` | `termica.mind` | 1 | SEGURIDAD |
+| 5 | `cuadros` | `cuadros_color.mind` | 1 | UN GRAN EQUIPO |
 
-- `active`: la cámara y el escáner ya están funcionando.
-- `starting`: el inicio todavía está en curso; evita abrir dos escáneres a la vez.
-- `closeRequested`: el usuario pidió salir mientras la cámara se estaba iniciando.
-- `detectedTargets`: objetivos del `.mind` de la estación actual que MindAR mantiene a la vista.
+El orden del array define el orden del recorrido. Todas las imágenes de un mismo `.mind` muestran la misma tarjeta.
+
+---
+
+## Arquitectura de `workplace.js`
+
+El archivo está envuelto en una IIFE (`(() => { … })()`) para no contaminar el ámbito global.
+
+### Estado
+
+| Variable | Propósito |
+|----------|-----------|
+| `arSystem` | Instancia de `mindar-image-system` |
+| `active` | La cámara está corriendo (se activa con `arReady`) |
+| `starting` | `openAR()` está en curso; evita aperturas dobles |
+| `closeRequested` | El usuario cerró durante el arranque; la limpieza se completa en `finally` |
+| `currentGroupIndex` | Estación actual |
+| `targetEntities` | Entidades `<a-entity mindar-image-target>` de la estación actual |
+| `detectedTargets` | `Set` de objetivos visibles en este momento |
+| `routeAdvanceTimer` | Timer de avance (inactividad o pérdida del cartel) |
+| `switchingGroup` | Hay un cambio de estación en curso |
 
 ### Funciones
 
-- **`addPanelBackground()`** coloca el panel PNG de Clarolab detrás del texto de cada tarjeta.
-- **`setStatus(message)`** cambia el texto que se ve en la parte central del escáner.
-- **`showScanner(message)`** oculta la bienvenida, hace visible el visor y muestra el estado inicial.
-- **`restoreWelcome()`** oculta el visor, devuelve la bienvenida y enfoca el botón de inicio.
-- **`waitForScene()`** espera el evento `loaded` de A-Frame. Si la escena no queda lista en diez segundos, devuelve un error en vez de dejar la pantalla esperando para siempre.
-- **`openAR()`** valida el acceso a la cámara, espera a que la escena esté lista, conecta el archivo `.mind` con MindAR y arranca la cámara. También actualiza el mensaje cuando la foto se encuentra, se pierde o MindAR devuelve un error.
-- **`closeAR()`** cierra la cámara, retira el componente `mindar-image` y vuelve a la bienvenida. Si el cierre ocurre durante el inicio, marca la solicitud para que la limpieza se complete al terminar esa operación.
+| Función | Qué hace |
+|---------|----------|
+| `addPanelBackground(card)` | Agrega un `a-plane` con `panelpruea.png` como fondo de la tarjeta |
+| `createText(parent, id, value, …)` | Crea un `a-text` (Roboto, shader MSDF) |
+| `buildTargets(group, index)` | Elimina las entidades anteriores y crea `targetCount` entidades `mindar-image-target`, cada una con su tarjeta (marca "CLAROLAB · ESTACIÓN 0N", título, divisor, 4 líneas y pie). Registra `targetFound` / `targetLost` |
+| `setStatus(msg)` | Actualiza el mensaje del HUD (`role="status"`, `aria-live="polite"`) |
+| `scheduleIdleAdvance()` | Programa el avance por inactividad |
+| `advanceRouteGroup()` | Detiene y libera el controlador actual, pasa a la siguiente estación (con módulo), arma sus objetivos y reinicia el tracking con `arSystem._startAR()` sin cerrar la cámara. Si falla, reintenta a los 5 s |
+| `showScanner(msg)` / `restoreWelcome()` | Alternan entre la bienvenida y el visor y manejan `aria-hidden`, la clase `ar-active` y el foco |
+| `waitForScene()` | Espera el evento `loaded` de A-Frame, con un límite de 10 s |
+| `openAR()` | Verifica el contexto seguro, espera la escena, arma los objetivos, configura `mindar-image` y llama a `arSystem.start()`. Traduce los errores a mensajes para el usuario (archivo/red, permisos, genérico) |
+| `closeAR()` | Cancela los timers, quita el componente `mindar-image` (esto detiene la cámara) y vuelve a la bienvenida. Si el cierre ocurre durante el arranque, delega la limpieza al `finally` de `openAR()` |
 
-Los eventos `targetFound` y `targetLost` se disparan en cada objetivo. El primero indica que la imagen entró en cámara; el segundo, que dejó de verse. `arReady` y `arError` pertenecen al sistema MindAR.
+### Parámetros de MindAR
 
-### Recorrido de inicio
-
-Al pulsar el botón, `openAR()` carga el `.mind` de la primera estación y abre la cámara. Cuando el cartel sale del visor, el código carga el próximo archivo en el mismo flujo de cámara. Si no se encuentra un cartel, cambia de estación después del tiempo de espera.
-
-`requestAnimationFrame` da dos ciclos al navegador para procesar los cambios de A-Frame antes de pedir el sistema MindAR. El bloque `finally` siempre libera el estado de “iniciando”. Si mientras tanto se pidió cerrar, detiene el sistema y quita el componente AR.
-
-Los ajustes `filterMinCF`, `filterBeta`, `warmupTolerance` y `missTolerance` controlan el filtrado y la estabilidad del seguimiento. `maxTrack: 1` limita el seguimiento a un cartel por vez.
-
-## Estaciones y marcadores
-
-Cada estación mantiene su propio `.mind`; no se fusionan dentro de un archivo `recorrido.mind`. Los archivos de entrada, oficina 2, oficina de Fran, tablero y cuadros se cargan secuencialmente en el orden de `workplace-content.js`. Si el usuario deja de enfocar un cartel, el escáner avanza a la estación siguiente manteniendo la cámara encendida. Si no detecta nada, avanza luego de 30 segundos.
-
-## Plantilla para agregar o actualizar una estación
-
-1. Coloca el `.mind` independiente en `assets` y añade una entrada a `groups` en `workplace-content.js` con su ruta, cantidad de imágenes internas y tarjeta.
-2. Conserva el orden en que quieres recorrer las estaciones. Cada objetivo interno de un mismo `.mind` muestra la tarjeta de ese archivo.
-3. Edita el título, las cuatro líneas, el pie, los colores y el motivo visual.
-
-No hace falta compilar ni reemplazar un `.mind` conjunto. Para actualizar una estación, reemplaza únicamente su `.mind` y su texto.
-## Cómo abrirlo para usar la cámara
-
-La cámara normalmente requiere un contexto seguro. Abre el sitio desde `localhost` durante el desarrollo o publícalo con HTTPS; abrir el HTML directamente desde una carpeta (`file://`) puede bloquear permisos o la carga del marcador. También se necesita conexión a Internet para descargar A-Frame y MindAR.
-
-Para levantar un servidor local desde la carpeta del proyecto, ejecuta:
-
-```powershell
-python -m http.server 8000
+```js
+scene.setAttribute('mindar-image', {
+  imageTargetSrc: group.file,
+  autoStart: false,              // la cámara arranca al pulsar el botón
+  uiLoading: 'no', uiScanning: 'no', // se usa el HUD propio
+  filterMinCF: 0.001, filterBeta: 1000, // suavizado (filtro One-Euro)
+  warmupTolerance: 8,            // frames necesarios para confirmar una detección
+  missTolerance: 15,             // frames sin ver el cartel antes de dar targetLost
+  maxTrack: 1                    // un cartel a la vez
+});
 ```
 
-Después abre `http://localhost:8000/` en el navegador. En el teléfono, el sitio publicado debe usar HTTPS. Al iniciar el recorrido, permite el acceso a la cámara y apunta a la misma foto usada para compilar el marcador.
+La tarjeta se posiciona en coordenadas del objetivo, donde el ancho de la imagen equivale a 1. El fondo mide `0.72 × 1.067` y está desplazado `(-.02, .2, .08)`.
 
-## Alcance actual
+---
 
-Esta versión recorre cinco archivos `.mind` independientes, de a uno por vez. La entrada presenta Clarolab; la oficina 2 cuenta la experiencia de pasantías y el ambiente del equipo; la oficina de Fran agradece el espacio y el acompañamiento. El tablero y los cuadros tienen tarjetas propias. El GIF de la portada tampoco lee un QR: su enlace simula el acceso hasta publicar la dirección definitiva en el QR físico.
+## Interfaz y estilos
+
+**`tour.css` (portada)**
+- `.welcome-art` es un lienzo vertical que pasa a horizontal en pantallas ≥ 760 px o en orientación apaisada.
+- `.scan-entry` posiciona el GIF. `mix-blend-mode: screen` hace que el negro del GIF se funda con el fondo.
+
+**`workplace.css` (recorrido)**
+- `.welcome-panel`: bienvenida en dos columnas en escritorio y una en móvil.
+- `.scan-panel`: siempre está en el DOM, pero invisible hasta tener `.is-visible`. Así A-Frame puede inicializarse antes de abrir la cámara.
+- `.scan-hud`: capa superpuesta con `pointer-events: none`, excepto el botón de cierre.
+- `.finder`: las esquinas verdes y la línea de escaneo, hechas solo con CSS.
+- `env(safe-area-inset-*)` respeta los notch y las barras del sistema.
+- Tiene ajustes para ≤ 760 px, ≤ 380 px, alturas bajas y `prefers-reduced-motion`.
+
+Paleta: `--ink #050806`, `--green #00e6a0`, `--paper #f2f8f5`.
+
+---
+
+## Agregar o modificar una estación
+
+1. **Compilá el marcador** con el [MindAR Image Targets Compiler](https://hiukim.github.io/mind-ar-js-doc/tools/compile). Podés subir varias fotos del mismo cartel o lugar para mejorar la detección y descargar el `.mind`.
+2. Copiá el `.mind` en `assets/`. Conviene guardar también las fotos originales como referencia.
+3. Agregá una entrada en `groups` dentro de `workplace-content.js`, con `file`, el `targetCount` exacto (la cantidad de fotos compiladas), `title`, **4** `lines` y `footer`.
+4. Ubicá la entrada en la posición del array que corresponda al orden del recorrido.
+
+Para actualizar una estación existente, alcanza con reemplazar su `.mind` (y `targetCount` si cambió la cantidad de fotos) o editar sus textos. No hace falta tocar `workplace.js`.
+
+> Si `targetCount` es mayor que la cantidad real de imágenes del `.mind`, se crean entidades que nunca se detectan. Si es menor, algunas fotos se reconocen pero no muestran tarjeta.
+
+---
+
+## Publicación
+
+Cualquier hosting estático con HTTPS sirve. Como el repositorio está en GitHub, **GitHub Pages** es la opción más directa: *Settings → Pages → Deploy from branch → `main` / root*.
+
+Después de publicar, generá el QR físico con la URL pública.
+
+---
+
+## Limitaciones conocidas
+
+- **API privada de MindAR**: el cambio de estación sin cerrar la cámara usa `arSystem._startAR()`, un método interno de MindAR 1.2.5. Actualizar MindAR puede romperlo, y en ese caso el HUD muestra un error. Mantené la versión fijada.
+- **Campos sin uso**: `accent`, `background` y `visual` de cada estación todavía **no se aplican**. Los colores de la tarjeta están fijos en `#00e6a0` dentro de `workplace.js`.
+- **Recorrido cíclico y automático**: las estaciones avanzan por tiempo, no por posición. Si el visitante apunta a un cartel que no es el de la estación actual, ese cartel no se reconoce hasta que llegue su turno.
+- **Textos fijos de 4 líneas**: las posiciones Y de las líneas están fijas, así que con más de 4 líneas las que sobran no se muestran.
+- **Dependencia de CDN**: sin Internet no cargan A-Frame ni MindAR.
+- **Peso de los recursos**: los `.mind` suman unos 5 MB y `qr-scan.gif` pesa unos 3 MB. Conviene tenerlo en cuenta en redes móviles.
+- **Nombres a revisar**: `panelpruea.png` (parece "panelprueba") y la estación `oficina2`, cuyo título es "OFICINA N.º 1".
